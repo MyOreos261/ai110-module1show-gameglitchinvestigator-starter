@@ -1,68 +1,23 @@
 import random
+
 import streamlit as st
 
-def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
-    return 1, 100
+from logic_utils import (
+    check_guess,
+    get_range_for_difficulty,
+    parse_guess,
+    update_score,
+)
 
-
-def parse_guess(raw: str):
-    if raw is None:
-        return False, None, "Enter a guess."
-
-    if raw == "":
-        return False, None, "Enter a guess."
-
-    try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
-        return False, None, "That is not a number."
-
-    return True, value, None
-
-
-def check_guess(guess, secret):
-    if guess == secret:
-        return "Win", "🎉 Correct!"
-
-    try:
-        if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
-        else:
-            return "Too Low", "📉 Go LOWER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
-
-
-def update_score(current_score: int, outcome: str, attempt_number: int):
-    if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
-
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
-
-    return current_score
+# FIX (bug 2, hints inverted): the two messages below were swapped -- a guess
+# that was too high told the player to go HIGHER. Found by playing with the
+# debug panel open; AI confirmed the labels were right and only the wording
+# was crossed. Wording is a UI concern, so it stays here, not in logic_utils.
+HINTS = {
+    "Win": "🎉 Correct!",
+    "Too High": "📉 Go LOWER!",
+    "Too Low": "📈 Go HIGHER!",
+}
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -89,34 +44,53 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
-if "secret" not in st.session_state:
+# FIX (bugs 3, 4, 7): New Game used to reset only `attempts` and `secret`,
+# leaving `status` on "won" so the app locked the player out forever. Extracting
+# one reset function was the AI's suggestion; I took it because it makes a
+# half-reset impossible by construction rather than by remembering to do it.
+def reset_game():
+    """Start a fresh round for the CURRENT difficulty.
+
+    One function owns every piece of game state, so no caller can reset
+    half of it -- which is what broke the New Game button.
+    """
+    st.session_state.difficulty = difficulty
     st.session_state.secret = random.randint(low, high)
-
-if "attempts" not in st.session_state:
-    st.session_state.attempts = 1
-
-if "score" not in st.session_state:
+    st.session_state.attempts = 0
     st.session_state.score = 0
-
-if "status" not in st.session_state:
     st.session_state.status = "playing"
-
-if "history" not in st.session_state:
     st.session_state.history = []
+
+
+# FIX (bug 7, stale secret across difficulties): the old `if "secret" not in
+# st.session_state` guard ran once ever, so switching to Easy relabelled the
+# range but kept a secret of 63 in a 1-20 game. Reproduced live before fixing.
+if st.session_state.get("difficulty") != difficulty:
+    reset_game()
 
 st.subheader("Make a guess")
 
-st.info(
-    f"Guess a number between 1 and 100. "
-    f"Attempts left: {attempt_limit - st.session_state.attempts}"
-)
+# FIX (bug 5, one-rerun-stale display): these used to be drawn here, above the
+# buttons, so they showed the state from BEFORE the click. Reserve the spot now,
+# paint at the end. The AI first proposed st.empty(); I changed it to
+# st.container() because st.empty() rebuilt the expander and snapped it shut
+# every rerun -- only visible by clicking through the app, not by reading it.
+info_slot = st.container()
+debug_slot = st.container()
 
-with st.expander("Developer Debug Info"):
-    st.write("Secret:", st.session_state.secret)
-    st.write("Attempts:", st.session_state.attempts)
-    st.write("Score:", st.session_state.score)
-    st.write("Difficulty:", difficulty)
-    st.write("History:", st.session_state.history)
+
+def paint_status():
+    """Fill the reserved slots with the CURRENT state. Called on every exit path."""
+    info_slot.info(
+        f"Guess a number between {low} and {high}. "
+        f"Attempts left: {max(0, attempt_limit - st.session_state.attempts)}"
+    )
+    with debug_slot.expander("Developer Debug Info"):
+        st.write("Secret:", st.session_state.secret)
+        st.write("Attempts:", st.session_state.attempts)
+        st.write("Score:", st.session_state.score)
+        st.write("Difficulty:", difficulty)
+        st.write("History:", st.session_state.history)
 
 raw_guess = st.text_input(
     "Enter your guess:",
@@ -132,9 +106,7 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
-    st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
-    st.success("New game started.")
+    reset_game()
     st.rerun()
 
 if st.session_state.status != "playing":
@@ -142,6 +114,7 @@ if st.session_state.status != "playing":
         st.success("You already won. Start a new game to play again.")
     else:
         st.error("Game over. Start a new game to try again.")
+    paint_status()
     st.stop()
 
 if submit:
@@ -155,12 +128,11 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
-        if st.session_state.attempts % 2 == 0:
-            secret = str(st.session_state.secret)
-        else:
-            secret = st.session_state.secret
-
-        outcome, message = check_guess(guess_int, secret)
+        # FIX (bug 1, the state bug): an `if attempts % 2 == 0` branch used to
+        # cast the secret to str here, making comparisons alphabetical ("9" >
+        # "50"). The secret never changed value -- only its type.
+        outcome = check_guess(guess_int, st.session_state.secret)
+        message = HINTS[outcome]
 
         if show_hint:
             st.warning(message)
@@ -186,6 +158,8 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+paint_status()
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
