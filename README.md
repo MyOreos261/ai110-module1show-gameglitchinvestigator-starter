@@ -25,10 +25,6 @@ It wrote the code, ran away, and now the game is unplayable.
 
 ## 📝 Document Your Experience
 
-- [x] Describe the game's purpose.
-- [x] Detail which bugs you found.
-- [x] Explain what fixes you applied.
-
 ### The game's purpose
 
 A single-player number guessing game built with Streamlit. The app picks a secret number
