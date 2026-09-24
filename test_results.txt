@@ -1,0 +1,28 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\Ariana\Downloads\AI110\ai110-module1show-gameglitchinvestigator-starter\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Ariana\Downloads\AI110\ai110-module1show-gameglitchinvestigator-starter
+plugins: anyio-4.15.1
+collecting ... collected 19 items
+
+tests/test_edge_cases.py::test_parse_guess_rejects_empty_string PASSED   [  5%]
+tests/test_edge_cases.py::test_parse_guess_rejects_whitespace_only PASSED [ 10%]
+tests/test_edge_cases.py::test_parse_guess_rejects_non_numeric PASSED    [ 15%]
+tests/test_edge_cases.py::test_parse_guess_truncates_decimals PASSED     [ 21%]
+tests/test_edge_cases.py::test_parse_guess_rejects_scientific_notation PASSED [ 26%]
+tests/test_edge_cases.py::test_parse_guess_accepts_negative_numbers PASSED [ 31%]
+tests/test_edge_cases.py::test_parse_guess_accepts_out_of_range_number PASSED [ 36%]
+tests/test_edge_cases.py::test_parse_guess_handles_very_large_number PASSED [ 42%]
+tests/test_edge_cases.py::test_win_payout_has_a_floor_of_ten PASSED      [ 47%]
+tests/test_edge_cases.py::test_unknown_outcome_leaves_score_untouched PASSED [ 52%]
+tests/test_edge_cases.py::test_known_difficulties_have_expected_ranges PASSED [ 57%]
+tests/test_edge_cases.py::test_unknown_difficulty_falls_back_to_normal PASSED [ 63%]
+tests/test_game_logic.py::test_winning_guess PASSED                      [ 68%]
+tests/test_game_logic.py::test_guess_too_high PASSED                     [ 73%]
+tests/test_game_logic.py::test_guess_too_low PASSED                      [ 78%]
+tests/test_game_logic.py::test_hint_is_not_affected_by_digit_count PASSED [ 84%]
+tests/test_game_logic.py::test_type_mismatch_raises_instead_of_comparing_text PASSED [ 89%]
+tests/test_game_logic.py::test_wrong_guess_never_increases_score PASSED  [ 94%]
+tests/test_game_logic.py::test_win_on_first_attempt_pays_full_points PASSED [100%]
+
+============================= 19 passed in 0.05s ==============================
