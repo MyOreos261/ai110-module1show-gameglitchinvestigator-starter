@@ -44,6 +44,7 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
+
 # FIX (bugs 3, 4, 7): New Game used to reset only `attempts` and `secret`,
 # leaving `status` on "won" so the app locked the player out forever. Extracting
 # one reset function was the AI's suggestion; I took it because it makes a
@@ -91,6 +92,7 @@ def paint_status():
         st.write("Score:", st.session_state.score)
         st.write("Difficulty:", difficulty)
         st.write("History:", st.session_state.history)
+
 
 raw_guess = st.text_input(
     "Enter your guess:",

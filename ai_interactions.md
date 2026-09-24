@@ -117,21 +117,75 @@ evidence. The rest document behavior; they do not independently verify it.
 
 > Document your use of AI for linting or code style improvements.
 
+Docstrings came first: every function in `logic_utils.py` (and the module itself) was
+given one during the Phase 2 refactor, so this pass was only about style enforcement.
+No linter was installed in the venv, so step one was picking one and getting a baseline.
+
 **Prompt used:**
 
 ```
-<!-- Paste the prompt you gave the AI -->
+Install a linter in the venv and run it over app.py, logic_utils.py and tests/.
+Show me the output BEFORE changing anything, then apply the PEP 8 fixes and
+re-run so I can see it clean. Tell me which suggestions you did not apply and why
+-- I do not want churn in working code just to satisfy a default setting.
 ```
+
+The last sentence was deliberate. Asking only "make it PEP 8 compliant" invites an
+assistant to rewrite whatever the tool complains about; asking it to *justify* what it
+skipped keeps the judgment call with me.
 
 **Linting output before:**
 
 ```
-<!-- Paste relevant linter warnings/errors -->
+$ python -m flake8 app.py logic_utils.py tests/
+app.py:51:1: E302 expected 2 blank lines, found 1
+app.py:95:1: E305 expected 2 blank lines after class or function definition, found 1
+tests/test_game_logic.py:22:1: E302 expected 2 blank lines, found 1
+tests/test_game_logic.py:27:1: E302 expected 2 blank lines, found 1
+```
+
+At flake8's default width of 79 columns there were 8 more, all `E501 line too long`,
+the longest being 84 characters:
+
+```
+5  E501 line too long (80 > 79 characters)
+3  E302 expected 2 blank lines, found 1
+1  E501 line too long (84 > 79 characters)
+1  E501 line too long (82 > 79 characters)
+1  E501 line too long (81 > 79 characters)
+1  E305 expected 2 blank lines after class or function definition, found 1
 ```
 
 **Changes applied:**
 
-<!-- Describe what you changed based on the AI's suggestions -->
+- **All 4 spacing findings fixed.** Two blank lines before `reset_game()`'s comment block
+  and before the `raw_guess` statement in `app.py`, and before the second and third
+  starter tests in `tests/test_game_logic.py`. These are real PEP 8 rules and the fix
+  costs nothing.
+- **The 8 `E501` findings: not applied.** Instead I set `max-line-length = 100` in a new
+  `setup.cfg`. The over-long lines are comment prose explaining the bug fixes, already
+  wrapped at roughly 88 columns and consistent with each other. Rewrapping them to 79
+  would have reflowed paragraphs of working commentary to satisfy a terminal width no one
+  uses, and it would have churned the diff on lines that have nothing to do with the bugs.
+  Black defaults to 88 for the same reason. Configuring the limit is an honest choice; it
+  is recorded in `setup.cfg` with the reasoning next to it, not hidden behind a
+  `# noqa`.
+- **Nothing was renamed.** The linter flagged no naming issues, and I did not go looking
+  for cosmetic renames that would break the imports in `app.py` and the tests.
+
+**Linting output after:**
+
+```
+$ python -m flake8 app.py logic_utils.py tests/
+$ echo $?
+0
+$ python -m pytest tests/ -q
+...................                                                      [100%]
+19 passed in 0.04s
+```
+
+Clean, and the suite still passes -- worth checking, because blank-line edits are exactly
+the kind of "safe" change that can silently break an indentation-sensitive language.
 
 ---
 
@@ -139,17 +193,56 @@ evidence. The rest document behavior; they do not independently verify it.
 
 > Compare two AI models on the same task.
 
+<!-- SETUP NOTE -- delete this comment block once the table below is filled in.
+     Model A's row is filled from the real Claude transcript in this repo.
+     To finish: paste the prompt below into a second model (Gemini, ChatGPT, or
+     Copilot Chat), then fill Model B's column and the verdict. -->
+
 **Task given to both models:**
 
-<!-- Describe what you asked each model to do -->
+Both models were given the original Bug 1 code from `app.py` and asked to diagnose and fix
+it, with no hint about what was wrong:
+
+```
+This is from a Streamlit number-guessing game. Players report that the
+"higher/lower" hints are wrong on some turns but correct on others.
+What is the bug, and how would you fix it?
+
+    if st.session_state.attempts % 2 == 0:
+        secret = str(st.session_state.secret)
+    else:
+        secret = st.session_state.secret
+
+    outcome, message = check_guess(guess_int, secret)
+
+And check_guess:
+
+    def check_guess(guess, secret):
+        try:
+            if guess == secret:
+                return "Win", "Correct!"
+            if guess > secret:
+                return "Too High", "Go HIGHER!"
+            return "Too Low", "Go LOWER!"
+        except TypeError:
+            return check_guess(str(guess), str(secret))
+```
+
+This bug was chosen because it has a trap in it: the `except TypeError` fallback means the
+code does not crash, so a model that only skims will call it safe. The real symptom is
+narrower than it looks -- only guesses with a different digit count than the secret get
+inverted hints, because `"9" > "50"` compares alphabetically.
 
 | | Model A | Model B |
 |-|---------|---------|
-| **Model name** | | |
-| **Response summary** | | |
-| **More Pythonic?** | | |
-| **Clearer explanation?** | | |
+| **Model name** | Claude Opus 5 (Claude Code, agent mode) | <!-- e.g. Gemini 2.5 Pro / GPT-5 --> |
+| **Response summary** | Found the string cast and the swapped hint strings. Also flagged the `except TypeError` as actively harmful -- it was *hiding* the type error rather than handling it -- and deleted it, then added a regression test asserting the comparison now raises. Initially overstated the severity, claiming the game was unwinnable on even attempts; running the code disproved that and it corrected itself. | <!-- summarize --> |
+| **More Pythonic?** | <!-- fill after Model B --> | <!-- fill after Model B --> |
+| **Clearer explanation?** | <!-- fill after Model B --> | <!-- fill after Model B --> |
 
 **Which did you prefer and why?**
 
-<!-- Your conclusion -->
+<!-- Your conclusion. Useful things to judge on:
+     - Did it spot that the bare `except TypeError` was masking the bug, or just fix the cast?
+     - Did it explain WHY "9" > "50" is False, or only assert that the comparison is wrong?
+     - Did it hand you a fix, or a fix plus a way to prove the fix worked? -->
