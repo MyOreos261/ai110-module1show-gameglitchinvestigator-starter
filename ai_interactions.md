@@ -237,10 +237,13 @@ inverted hints, because `"9" > "50"` compares alphabetically.
 |-|---------|---------|
 | **Model name** | Claude Opus 5 (Claude Code, agent mode) | <!-- e.g. Gemini 2.5 Pro / GPT-5 --> |
 | **Response summary** | Found the string cast and the swapped hint strings. Also flagged the `except TypeError` as actively harmful -- it was *hiding* the type error rather than handling it -- and deleted it, then added a regression test asserting the comparison now raises. Initially overstated the severity, claiming the game was unwinnable on even attempts; running the code disproved that and it corrected itself. | <!-- summarize --> |
-| **More Pythonic?** | <!-- fill after Model B --> | <!-- fill after Model B --> |
-| **Clearer explanation?** | <!-- fill after Model B --> | <!-- fill after Model B --> |
+| **More Pythonic?** | Mostly yes, and by subtraction. The fix deleted code rather than adding it: the attempts % 2 branch and the bare except TypeError both went, leaving three guard-clause returns and no else. It refused to catch TypeError at all, on the grounds that the exception was carrying real information and swallowing it is what let the bug hide for so long — EAFP is not a licence to catch and continue. It also split the outcome from its wording (check_guess returns "Win" / "Too High" / "Too Low"; the emoji strings live in a HINTS dict at app.py:16), which is what made the function testable without importing Streamlit. Where it is not especially Pythonic: those three outcomes are bare string literals passed between modules and compared with ==. An Enum or even module constants would be the idiomatic choice, and it did not suggest one — it matched the starter's existing string contract instead, which was the right call for the assignment but is not the right call for real code. | <!-- fill after Model B --> |
+| **Clearer explanation?** | Clearer explanation?	Clear, but only on the second pass — and the gap is the interesting part. The mechanical explanation was genuinely good: it said why "9" > "50" is True (character-by-character comparison, '9' outranks '5', so the length of the number never enters into it) rather than just asserting the comparison was wrong, and that is the detail that makes the "wrong on some turns but not others" symptom finally make sense. But its first account of the impact was confidently wrong — it claimed the game was unwinnable on even-numbered attempts, when the except TypeError fallback stringified both sides so "50" == "50" still won. It only corrected that after running the code. So: strong at explaining the mechanism it could read, unreliable at predicting the behavior until it executed something. The explanation I'd actually trust is the one that arrived with output attached — tests/test_game_logic.py:47, which asserts the comparison now raises instead of silently comparing text.
+ | <!-- fill after Model B --> |
 
 **Which did you prefer and why?**
+
+
 
 <!-- Your conclusion. Useful things to judge on:
      - Did it spot that the bare `except TypeError` was masking the bug, or just fix the cast?
