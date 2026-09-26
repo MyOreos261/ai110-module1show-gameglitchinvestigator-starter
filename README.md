@@ -84,8 +84,6 @@ change.
 
 ## 📸 Demo Walkthrough
 
-Describe your fixed game in numbered steps so a reader can follow along without watching a video:
-
 1. **Start the app** with `python -m streamlit run app.py`. The sidebar shows Difficulty
    "Normal", "Range: 1 to 100", and "Attempts allowed: 8". The main panel agrees:
    "Guess a number between 1 and 100. Attempts left: 8". Before the fix this read
@@ -162,4 +160,19 @@ The same output is committed as `test_results.txt`.
 
 ## 🚀 Stretch Features
 
-- [ ] [If you choose to complete Challenge 4, describe the Enhanced UI changes here — a screenshot is optional]
+**Challenge 1 — Advanced Edge-Case Testing.** `tests/test_edge_cases.py` adds 12 tests
+covering inputs the game was never designed for: empty and whitespace-only strings,
+non-numeric text, decimals, scientific notation, negative numbers, out-of-range numbers
+and very large values, plus the score floor and the unknown-difficulty fallback. The
+full run is in the Test Results section above.
+
+**Challenge 3 — Professional Documentation and Linting.** Every function in
+`logic_utils.py` carries a docstring, and flake8 now runs clean over `app.py`,
+`logic_utils.py` and `tests/`. The four PEP 8 spacing findings were fixed; the eight
+`E501` line-length findings were not, and `setup.cfg` records why.
+
+**Challenge 5 — AI Model Comparison.** Bug 1 was given to Claude Opus 5 and Gemini 1.5
+Pro with no hint about the cause; the comparison is in `ai_interactions.md`.
+
+Prompts, linter output and the model comparison are all documented in
+`ai_interactions.md`.
